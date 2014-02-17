@@ -9,9 +9,9 @@ gem 'friendly_id'
 gem 'kaminari'
 gem 'mail'
 gem 'paperclip'
-gem 'pg'
 gem 'slim-rails'
 
+# Check and add rails_admin
 if rails_admin
   gem 'rails_admin'
 end
@@ -39,6 +39,16 @@ end
 gem_group :test do
   gem "rspec-rails"
 end
+
+# Set postgres as my default database
+gsub_file 'Gemfile', "gem 'sqlite3'", "gem 'pg'"
+database_name = ask("What would you like the database to be called? [left <empty> to use #{app_name}_environment")
+database_name = "#{app_name}" if database_name.blank?
+run "cp ../templates/database.yml config/database.yml"
+gsub_file 'config/database.yml', "application_database", "#{database_name}"
+
+# Create the database
+rake "db:create"
 
 # Run bundle to install gems
 run "bundle"
