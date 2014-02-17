@@ -42,9 +42,9 @@ end
 
 # Set postgres as my default database
 gsub_file 'Gemfile', "gem 'sqlite3'", "gem 'pg'"
-database_name = ask("What would you like the database to be called? [left <empty> to use #{app_name}_environment")
+database_name = ask("What would you like the database to be called? Press <enter> for #{app_name}")
 database_name = "#{app_name}" if database_name.blank?
-run "cp ../templates/database.yml config/database.yml"
+run "cp ../templates/database.yml.example config/database.yml"
 gsub_file 'config/database.yml', "application_database", "#{database_name}"
 
 # Create the database
@@ -72,6 +72,12 @@ generate "rails_admin:install"
 
 # Ask me if we want to run migration
 rake("db:migrate") if yes?("Run db:migrate?")
+
+# Git
+run "cp ../templates/.gitignore .gitignore"
+git :init
+git add: "."
+git commit: "-am 'First commit!'"
 
 # Run the server
 run "bundle exec spring rails s"
