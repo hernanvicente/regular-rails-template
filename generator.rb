@@ -25,11 +25,14 @@ gem_group :development do
   gem 'binding_of_caller'
   gem 'brakeman'
   gem 'bullet'
+  gem 'guard'
+  gem 'guard-livereload', require:false
   gem 'hirb'
   gem 'hookup'
   gem 'jazz_hands'
   gem 'pry-rails'
   gem 'quiet_assets'
+  gem 'rack-livereload'
   gem 'richrc'
   gem 'spring'
   gem 'uniform_notifier'
@@ -72,6 +75,13 @@ generate "rails_admin:install"
 
 # Ask me if we want to run migration
 rake("db:migrate") if yes?("Run db:migrate?")
+
+# Config Guard
+run "guard init"
+# Congig Rack-LiveReload
+insert_into_file "config/environments/development.rb", :before => /^end/ do
+  "  # From https://github.com/johnbintz/rack-livereload\n  config.middleware.use Rack::LiveReload\n"
+end
 
 # Git
 run "cp ../templates/.gitignore .gitignore"
