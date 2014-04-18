@@ -1,5 +1,5 @@
 # Questions
-rails_admin = yes? 'Will we use rails admin?'
+admin_database = yes? "Will we use an web admin database?"
 
 # Global Gems
 gem 'aws-s3'
@@ -11,9 +11,15 @@ gem 'mail'
 gem 'paperclip'
 gem 'slim-rails'
 
-# Check and add rails_admin
-if rails_admin
-  gem 'rails_admin'
+# Check and add admin
+if admin_database
+    web_admin_database = ask("What is your favorite web admin database?", :limited_to => ["rails_admin", "activeadmin"])
+  case web_admin_database
+    when "rails_admin"
+      gem 'rails_admin'
+    when "activeadmin"
+      gem 'activeadmin', github: 'gregbell/active_admin'
+  end
 end
 
 # Development Gems
