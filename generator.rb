@@ -83,7 +83,9 @@ generate "devise:install"
 generate "devise User"
 
 # Install rails admin
-generate "rails_admin:install"
+if admin_database && admin_database == 'rails_admin'
+  generate "rails_admin:install"
+end
 
 # Ask me if we want to run migration
 rake("db:migrate") if yes?("Run db:migrate?")
