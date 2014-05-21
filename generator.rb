@@ -56,11 +56,17 @@ database_name = "#{app_name}" if database_name.blank?
 run "cp ../templates/database.yml.example config/database.yml"
 gsub_file 'config/database.yml', "application_database", "#{database_name}"
 
-# Create the database
-rake "db:create"
+# Database credentials
+database_user_name = ask("Enter the database user name. Press <enter> to skip.")
+gsub_file 'config/database.yml', "#user: database_user_name", "user: #{database_user_name}" unless database_user_name.empty?
+database_user_password = ask("Enter the database user password. Press <enter> to skip.")
+gsub_file 'config/database.yml', "#password: database_user_password", "password: #{database_user_password}" unless database_user_password.empty?
 
 # Run bundle to install gems
 run "bundle"
+
+# Create the database
+rake "db:create"
 
 # Generate a pages controller
 pages_controller = yes? 'Will we use pages controller?'
