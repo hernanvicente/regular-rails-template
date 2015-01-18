@@ -36,6 +36,8 @@ gem_group :development do
   gem 'hirb'
   gem 'hookup'
   gem 'jazz_hands'
+  gem 'letter_opener'
+  gem 'populator'
   gem 'pry-rails'
   gem 'quiet_assets'
   gem 'rack-livereload'
@@ -46,7 +48,7 @@ end
 
 # Test Gems
 gem_group :test do
-  gem "rspec-rails"
+  gem "shoulda"
 end
 
 # Set postgres as my default database
@@ -86,6 +88,8 @@ generate "devise User"
 if admin_database && admin_database == 'rails_admin'
   generate "rails_admin:install"
 end
+
+
 
 # Ask me if we want to run migration
 rake("db:migrate") if yes?("Run db:migrate?")
