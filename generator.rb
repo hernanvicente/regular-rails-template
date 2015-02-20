@@ -35,14 +35,12 @@ gem_group :development do
   gem 'guard-livereload', require:false
   gem 'hirb'
   gem 'hookup'
-  gem 'jazz_hands'
   gem 'letter_opener'
   gem 'populator'
   gem 'pry-rails'
   gem 'quiet_assets'
   gem 'rack-livereload'
   gem 'richrc'
-  gem 'spring'
   gem 'uniform_notifier'
 end
 
