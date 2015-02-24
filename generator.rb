@@ -1,3 +1,6 @@
+#Get the path of the application template
+path = File.expand_path File.dirname(__FILE__)
+
 # Questions
 admin_database = yes? "Will we use an web admin database?"
 
@@ -53,7 +56,8 @@ end
 gsub_file 'Gemfile', "gem 'sqlite3'", "gem 'pg'"
 database_name = ask("What would you like the database to be called? Press <enter> for #{app_name}")
 database_name = "#{app_name}" if database_name.blank?
-run "cp ../templates/database.yml.example config/database.yml"
+run "rm config/database.yml"
+run "cp #{path}/templates/database.yml.example config/database.yml"
 gsub_file 'config/database.yml', "application_database", "#{database_name}"
 
 # Database credentials
@@ -87,8 +91,6 @@ if admin_database && admin_database == 'rails_admin'
   generate "rails_admin:install"
 end
 
-
-
 # Ask me if we want to run migration
 rake("db:migrate") if yes?("Run db:migrate?")
 
@@ -100,10 +102,10 @@ insert_into_file "config/environments/development.rb", :before => /^end/ do
 end
 
 # Git
-run "cp ../templates/.gitignore .gitignore"
+run "cp #{path}/templates/.gitignore .gitignore"
 git :init
-git add: "."
-git commit: "-am 'First commit!'"
+git add: '.'
+git commit: "-a -m 'Initial commit'"
 
 # Run the server
 run "bundle exec spring rails s"
