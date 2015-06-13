@@ -14,6 +14,9 @@ gem 'mail'
 gem 'paperclip'
 gem 'slim-rails'
 
+gem 'rails_12factor'
+gem 'unicorn'
+
 # Check and add admin
 if admin_database
     web_admin_database = ask("What is your favorite web admin database?", :limited_to => ["rails_admin", "activeadmin"])
@@ -39,6 +42,7 @@ gem_group :development do
   gem 'hirb'
   gem 'hookup'
   gem 'letter_opener'
+  gem 'meta_request'
   gem 'populator'
   gem 'pry-rails'
   gem 'quiet_assets'
