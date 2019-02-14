@@ -4,16 +4,17 @@ path = __dir__
 # Questions
 api_mode = yes? 'Will we work on api mode?'
 simple_command = yes? 'Will we use service objects with simple_command?'
-paperclip = yes? 'Will we use paperclip?'
 friendly_id = yes? 'Will we use slugs with friendly id?'
 change_template_language = yes? 'Will we use other template language?'
 admin_database = yes? 'Will we use an web admin database?'
 devise = yes? 'Will we authenticate with devise?'
 
+if admin_database && admin_database == 'rails_admin'
+  paperclip = yes? 'Will we use paperclip? (Feb 2019: Rails admin only support paperclip)'
+end
+
 # Global Gems
 gem 'kaminari'
-gem 'mail'
-gem 'rails_12factor'
 
 gem 'devise' if devise
 
@@ -25,7 +26,7 @@ end
 
 gem 'simple_command' if simple_command
 
-gem 'paperclip', '~> 5.0.0' if paperclip
+gem 'paperclip' if paperclip
 
 gem 'friendly_id' if friendly_id
 
@@ -55,33 +56,34 @@ if admin_database
 end
 
 # Development Gems
+letter_opener = yes? 'Will use letter_opener on dev mode?'
+
 gem_group :development do
   gem 'annotate'
-  gem 'auto_annotate'
-  gem 'autorefresh'
   gem 'awesome_print'
   gem 'better_errors'
   gem 'binding_of_caller'
   gem 'brakeman'
+  gem 'ffaker'
   gem 'guard'
   gem 'guard-livereload', require: false
-  gem 'hirb'
-  gem 'hookup'
-  gem 'letter_opener'
-  gem 'meta_request'
-  gem 'populator'
+  gem 'guard-minitest'
+  gem 'letter_opener' if letter_opener
   gem 'pry-rails'
   gem 'rack-livereload'
-  gem 'richrc'
   gem 'rubocop', require: false
 end
 
 # Test Gems
 gem_group :test do
-  gem 'minitest-osx'
   gem 'minitest-reporters'
   gem 'mocha', require: false
-  gem 'shoulda'
+  gem 'shoulda-context'
+  gem 'shoulda-matchers', '4.0.0.rc1'
+end
+
+gem_group :development, :test do
+  gem 'factory_bot_rails'
 end
 
 # Config test helper
@@ -91,7 +93,9 @@ insert_into_file 'test/test_helper.rb', after: 'rails/test_help\n' do
 end
 
 # Set postgres as my default database
+db_host = 'localhost'
 gsub_file 'Gemfile', "gem 'sqlite3'", "gem 'pg'"
+database_name = ask("Enter your database host: Press <enter> for #{db_host}")
 database_name = ask("What would you like the database to be called? Press <enter> for #{app_name}")
 database_name = app_name.to_s if database_name.blank?
 run 'rm config/database.yml'
@@ -115,6 +119,11 @@ if admin_database && web_admin_database == 'administrate'
   generate 'administrate:install'
 end
 
+# Run rails_admin installer
+if admin_database && admin_database == 'rails_admin'
+  generate 'rails_admin:install'
+end
+
 # Generate a pages controller
 pages_controller = yes? 'Will we use pages controller?'
 generate(:controller, 'pages about home help') if pages_controller
@@ -133,16 +142,34 @@ if api_mode
   run "cp #{path}/templates/config/initializers/cors.rb config/initializers/cors.rb"
 end
 
-# Install rails admin
-if admin_database && admin_database == 'rails_admin'
-  generate 'rails_admin:install'
-end
-
 # Ask me if we want to run migration
 rake('db:migrate') if yes?('Run db:migrate?')
 
 # Config Guard
 run 'guard init'
+run 'guard init minitest'
+
+# FactoryBot syntax methods
+comment_lines 'test/test_helper.rb', /fixtures :all/
+insert_into_file 'test/test_helper.rb', after: /class ActiveSupport::TestCase\n/ do
+  "  include FactoryBot::Syntax::Methods\n"
+end
+
+insert_into_file 'test/test_helper.rb', after: /require \'rails\/test_help\'\n/ do
+  "  Shoulda::Matchers.configure do |config|\n" \
+  "    config.integrate do |with|\n" \
+  "      with.test_framework :minitest\n" \
+  "      with.library :rails\n" \
+  "    end\n" \
+  "  end"
+end
+
+# Minitest Reporters
+insert_into_file 'test/test_helper.rb', after: /require \'rails\/test_help\'\n/ do
+  "  require 'minitest/reporters'\n" \
+  "  Minitest::Reporters.use!\n" \
+  "\n"
+end
 
 # Congig Rack-LiveReload
 insert_into_file 'config/environments/development.rb', before: /^end/ do
@@ -156,4 +183,4 @@ git add: '.'
 git commit: "-a -m 'Initial commit'"
 
 # Run the server
-run 'bundle exec spring rails s'
+run 'bundle exec rails s'
