@@ -8,14 +8,11 @@ friendly_id = yes? 'Will we use slugs with friendly id?'
 change_template_language = yes? 'Will we use other template language?'
 admin_database = yes? 'Will we use an web admin database?'
 devise = yes? 'Will we authenticate with devise?'
+sitemap = yes? 'Will we need a sitemap generator?'
 
-if admin_database && admin_database == 'rails_admin'
-  paperclip = yes? 'Will we use paperclip? (Feb 2019: Rails admin only support paperclip)'
-end
 
 # Global Gems
 gem 'kaminari'
-
 gem 'devise' if devise
 
 if api_mode
@@ -25,10 +22,8 @@ if api_mode
 end
 
 gem 'simple_command' if simple_command
-
-gem 'paperclip' if paperclip
-
 gem 'friendly_id' if friendly_id
+gem 'sitemap_generator', '~> 6.0', '>= 6.0.1' if sitemap
 
 if change_template_language
   template_language = ask('Which template engine would you like to use?',
@@ -44,14 +39,12 @@ end
 # Check and add admin
 if admin_database
   web_admin_database = ask('What is your favorite web admin database?',
-                           limited_to: %w[administrate rails_admin activeadmin])
+                           limited_to: %w[administrate rails_admin])
   case web_admin_database
   when 'administrate'
     gem 'administrate'
   when 'rails_admin'
     gem 'rails_admin'
-  when 'activeadmin'
-    gem 'activeadmin', github: 'gregbell/active_admin'
   end
 end
 
@@ -94,7 +87,7 @@ end
 
 # Set postgres as my default database
 db_host = 'localhost'
-gsub_file 'Gemfile', "gem 'sqlite3'", "gem 'pg'"
+gsub_file 'Gemfile', /gem 'sqlite3'.*$/, "gem 'pg'"
 database_name = ask("Enter your database host: Press <enter> for #{db_host}")
 database_name = ask("What would you like the database to be called? Press <enter> for #{app_name}")
 database_name = app_name.to_s if database_name.blank?
@@ -114,16 +107,6 @@ run 'bundle'
 # Create the database
 rake 'db:create'
 
-# Run administrate installer
-if admin_database && web_admin_database == 'administrate'
-  generate 'administrate:install'
-end
-
-# Run rails_admin installer
-if admin_database && admin_database == 'rails_admin'
-  generate 'rails_admin:install'
-end
-
 # Generate a pages controller
 pages_controller = yes? 'Will we use pages controller?'
 generate(:controller, 'pages about home help') if pages_controller
@@ -132,10 +115,50 @@ generate(:controller, 'pages about home help') if pages_controller
 route "root to: 'pages#home'" if pages_controller
 
 # Install devise
-if devise
+def add_devise
   generate 'devise:install'
   generate 'devise User'
+
+  environment "config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }",
+              env: 'development'
 end
+
+def add_administrate
+  generate "administrate:install"
+
+  append_to_file "app/assets/config/manifest.js" do
+    "//= link administrate/application.css\n//= link administrate/application.js"
+  end
+
+  gsub_file "app/dashboards/announcement_dashboard.rb",
+    /announcement_type: Field::String/,
+    "announcement_type: Field::Select.with_options(collection: Announcement::TYPES)"
+
+  gsub_file "app/dashboards/user_dashboard.rb",
+    /email: Field::String/,
+    "email: Field::String,\n    password: Field::String.with_options(searchable: false)"
+
+  gsub_file "app/dashboards/user_dashboard.rb",
+    /FORM_ATTRIBUTES = \[/,
+    "FORM_ATTRIBUTES = [\n    :password,"
+
+  gsub_file "app/controllers/admin/application_controller.rb",
+    /# TODO Add authentication logic here\./,
+    "redirect_to '/', alert: 'Not authorized.' unless user_signed_in? && current_user.admin?"
+
+  environment do <<-RUBY
+    # Expose our application's helpers to Administrate
+    config.to_prepare do
+      Administrate::ApplicationController.helper #{@app_name.camelize}::Application.helpers
+    end
+  RUBY
+  end
+end
+
+def add_sitemap
+  rails_command "sitemap:install"
+end
+
 
 # Config rack cors
 if api_mode
@@ -175,6 +198,17 @@ end
 insert_into_file 'config/environments/development.rb', before: /^end/ do
   "  # From https://github.com/johnbintz/rack-livereload\n  config.middleware.use Rack::LiveReload\n"
 end
+
+# Run admin installer
+if admin_database
+  add_administrate if web_admin_database == 'administrate'
+  add_devise       if web_admin_database == 'rails_admin'
+end
+
+# Sitemap
+add_sitemap if sitemap
+
+rails_command 'webpacker:install'
 
 # Git
 run "cp #{path}/templates/.gitignore .gitignore"
