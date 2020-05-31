@@ -3,9 +3,17 @@ Regular rails app template
 
 This is a template I use for my new Ruby on Rails applications. **Pull requests are welcome.**
 
-## How to use ##
+## Requirements
 
-`` rails new [app_name] -m https://raw.github.com/hernanvicente/regular-rails-template.git ``
+You'll need the following installed to run the template successfully:
+  * Ruby 2.6.3 or higher
+  * Redis - For ActionCable support
+  * bundler - gem install bundler
+  * rails - gem install rails
+  * Yarn - brew install yarn or Install Yarn
+
+## How to use ##
+`` rails new [app_name] -m https://raw.githubusercontent.com/hernanvicente/regular-rails-template/master/generator.rb ``
 
 ## Considerations ##
 
@@ -18,9 +26,9 @@ http://guides.rubyonrails.org/generators.html
 https://github.com/erikhuda/thor
 https://gist.github.com/srowley/2573325
 http://stackoverflow.com/questions/19835803/thor-inject-into-file-at-end
+https://github.com/excid3/jumpstart
 
 ## Pending ##
-* Gems: Ask for additional gems
-* ~~Database: Ask for user and password~~
-* Deployment: Ask for a remote repo
-* Heroku: Ask if the user want to create in Heroku
+* Git setup
+* Deployment setup
+* HTML Boilertemplate
