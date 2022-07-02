@@ -1,6 +1,7 @@
 # Get the path of the application template
 path = __dir__
 
+
 # Questions
 api_mode = yes? 'Will we work on api mode?'
 simple_command = yes? 'Will we use service objects with simple_command?'
@@ -11,8 +12,12 @@ authentication = yes? 'Will we authenticate?'
 sitemap = yes? 'Will we need a sitemap generator?'
 pagination = yes? 'Will we paginate with kaminari?'
 
+
 # Global Gems
 gem 'kaminari' if pagination
+gem 'simple_command' if simple_command
+gem 'friendly_id' if friendly_id
+gem 'sitemap_generator', '~> 6.0', '>= 6.0.1' if sitemap
 
 if authentication
   authentication_gem = ask('Which authentication gem would you like to use?',
@@ -28,14 +33,10 @@ if authentication
 end
 
 if api_mode
-  gem 'active_model_serializers'
+  gem 'jsonapi-serializer'
   gem 'jwt'
   gem 'rack-cors', require: 'rack/cors'
 end
-
-gem 'simple_command' if simple_command
-gem 'friendly_id' if friendly_id
-gem 'sitemap_generator', '~> 6.0', '>= 6.0.1' if sitemap
 
 if change_template_language
   template_language = ask('Which template engine would you like to use?',
@@ -44,21 +45,25 @@ if change_template_language
   when 'slim'
     gem 'slim-rails'
   when 'haml'
-    gem 'slim-rails'
+    gem 'haml-rails'
   end
 end
 
-# Check and add admin
 if admin_database
   web_admin_database = ask('What is your favorite web admin database?',
-                           limited_to: %w[administrate rails_admin])
+                           limited_to: %w[activeadmin administrate rails_admin trestle])
   case web_admin_database
+  when 'activeadmin'
+    gem 'activeadmin' # https://github.com/activeadmin/activeadmin
   when 'administrate'
-    gem 'administrate'
+    gem 'administrate' # https://github.com/thoughtbot/administrate
   when 'rails_admin'
-    gem 'rails_admin'
+    gem 'rails_admin', '~> 3.0' # https://github.com/railsadminteam/rails_admin
+  when 'trestle'
+    gem 'trestle' # https://github.com/TrestleAdmin/trestle
   end
 end
+
 
 # Development Gems
 letter_opener = yes? 'Will use letter_opener on dev mode?'
@@ -69,7 +74,6 @@ gem_group :development do
   gem 'better_errors'
   gem 'binding_of_caller'
   gem 'brakeman'
-  gem 'ffaker'
   gem 'guard'
   gem 'guard-livereload', require: false
   gem 'guard-minitest'
@@ -79,33 +83,50 @@ gem_group :development do
   gem 'rubocop', require: false
 end
 
+
 # Test Gems
 gem_group :test do
   gem 'minitest-reporters'
   gem 'mocha', require: false
   gem 'shoulda-context'
-  gem 'shoulda-matchers', '4.0.0.rc1'
+  gem 'shoulda-matchers', '~> 5.0'
 end
 
 gem_group :development, :test do
   gem 'factory_bot_rails'
+  gem 'ffaker'
 end
 
-# Config test helper
+
+# Config test environment
 insert_into_file 'test/test_helper.rb', after: 'rails/test_help\n' do
   "require 'minitest/pride'\n"
   "require 'minitest/reporters'\n"
 end
 
-# Set postgres as my default database
-db_host = 'localhost'
-gsub_file 'Gemfile', /gem 'sqlite3'.*$/, "gem 'pg'"
-database_name = ask("Enter your database host: Press <enter> for #{db_host}")
-database_name = ask("What would you like the database to be called? Press <enter> for #{app_name}")
+
+# Database setup for Postgres
+gsub_file 'Gemfile', /gem "sqlite3".*$/, "gem 'pg'"
+
+database_default_host = 'localhost'
+database_default_port = 5432
+database_host = ask("Enter your database host: Press <enter> for #{database_default_host}")
+database_port = ask("Enter your database port: Press <enter> for #{database_default_port}")
+database_name = ask("Enter the database prefix i.e 'garden' for 'garden_development' and 'garden_test') or press <enter> to use #{app_name} as prefix")
+database_username = ask("Enter the database username")
+database_password = ask("Enter the database password")
+
 database_name = app_name.to_s if database_name.blank?
-run 'rm config/database.yml'
 run "cp #{path}/templates/database.yml.example config/database.yml"
-gsub_file 'config/database.yml', 'application_database', database_name.to_s
+run "cp #{path}/templates/.env.example .env"
+
+gsub_file '.env', 'app_db_host', database_name
+gsub_file '.env', 'app_db_port', database_port
+gsub_file '.env', 'app_db_username', database_username
+gsub_file '.env', 'app_db_password', database_password
+gsub_file '.env', 'app_db_database', "#{database_name}_development"
+gsub_file '.env', 'app_db_test_database', "#{database_name}_test"
+
 
 # Database credentials
 database_user_name = ask('Enter the database user name. Press <enter> to skip.')
@@ -117,26 +138,39 @@ unless database_user_password.empty?
   gsub_file 'config/database.yml', '#password: database_user_password', "password: #{database_user_password}"
 end
 
+
 # Run bundle to install gems
 run 'bundle'
 
+
 # Create the database
 rake 'db:create'
+
 
 # Generate a pages controller
 pages_controller = yes? 'Will we use pages controller?'
 generate(:controller, 'pages about home help') if pages_controller
 
+
 # Set the default controller/action application
 route "root to: 'pages#home'" if pages_controller
 
-# Install devise
+
+# Install authentication
 def add_devise
   generate 'devise:install'
   generate 'devise User'
   rake('db:migrate')
   environment "config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }",
               env: 'development'
+end
+
+def add_activeadmin
+  generate 'active_admin:install'
+end
+
+def add_trestle
+  generate 'trestle:install'
 end
 
 def add_administrate(authentication, authentication_gem)
@@ -174,15 +208,19 @@ def add_sitemap
   rails_command 'sitemap:install'
 end
 
+
 # Config rack cors
 run "cp #{path}/templates/config/initializers/cors.rb config/initializers/cors.rb" if api_mode
+
 
 # Ask me if we want to run migration
 rake('db:migrate') if yes?('Run db:migrate?')
 
+
 # Config Guard
 run 'guard init'
 run 'guard init minitest'
+
 
 # FactoryBot syntax methods
 comment_lines 'test/test_helper.rb', /fixtures :all/
@@ -199,6 +237,7 @@ insert_into_file 'test/test_helper.rb', after: %r{require \'rails/test_help\'\n}
   '  end'
 end
 
+
 # Minitest Reporters
 insert_into_file 'test/test_helper.rb', after: %r{require \'rails/test_help\'\n} do
   "  require 'minitest/reporters'\n" \
@@ -206,29 +245,37 @@ insert_into_file 'test/test_helper.rb', after: %r{require \'rails/test_help\'\n}
   "\n"
 end
 
+
 # Congig Rack-LiveReload
 insert_into_file 'config/environments/development.rb', before: /^end/ do
   "  # From https://github.com/johnbintz/rack-livereload\n  config.middleware.use Rack::LiveReload\n"
 end
 
+
 # Run devise
 add_devise if authentication_gem == 'devise'
+
 
 # Run admin installer
 if admin_database
   add_administrate(authentication, authentication_gem) if web_admin_database == 'administrate'
 end
 
+
 # Sitemap
 add_sitemap if sitemap
 
+
+# Webpacker
 rails_command 'webpacker:install'
+
 
 # Git
 run "cp #{path}/templates/.gitignore .gitignore"
 git :init
 git add: '.'
 git commit: "-a -m 'Initial commit'"
+
 
 # Run the server
 run 'bundle exec rails s'
