@@ -74,6 +74,7 @@ gem_group :development do
   gem 'better_errors'
   gem 'binding_of_caller'
   gem 'brakeman'
+  gem 'dotenv'
   gem 'guard'
   gem 'guard-livereload', require: false
   gem 'guard-minitest'
@@ -99,7 +100,7 @@ end
 
 
 # Config test environment
-insert_into_file 'test/test_helper.rb', after: 'rails/test_help\n' do
+insert_into_file 'test/test_helper.rb', after: "require rails/test_help\n" do
   "require 'minitest/pride'\n"
   "require 'minitest/reporters'\n"
 end
@@ -112,31 +113,27 @@ database_default_host = 'localhost'
 database_default_port = 5432
 database_host = ask("Enter your database host: Press <enter> for #{database_default_host}")
 database_port = ask("Enter your database port: Press <enter> for #{database_default_port}")
-database_name = ask("Enter the database prefix i.e 'garden' for 'garden_development' and 'garden_test') or press <enter> to use #{app_name} as prefix")
+database_prefix = ask("Enter the database prefix i.e 'garden' for 'garden_development' and 'garden_test') or press <enter> to use #{app_name} as prefix")
 database_username = ask("Enter the database username")
 database_password = ask("Enter the database password")
 
-database_name = app_name.to_s if database_name.blank?
-run "cp #{path}/templates/database.yml.example config/database.yml"
-run "cp #{path}/templates/.env.example .env"
+database_name = database_prefix.blank? ? app_name.to_s : database_prefix
+puts '----- database_name -----'
+puts database_prefix
+puts app_name.to_s
+puts '----- database_name -----'
 
+run "cp #{path}/templates/database.yml.example config/database.yml"
+gsub_file 'config/database.yml', 'app_db_database_development', "#{database_name}_development"
+gsub_file 'config/database.yml', 'app_db_database_test', "#{database_name}_test"
+
+run "cp #{path}/templates/.env.example .env"
 gsub_file '.env', 'app_db_host', database_name
 gsub_file '.env', 'app_db_port', database_port
 gsub_file '.env', 'app_db_username', database_username
 gsub_file '.env', 'app_db_password', database_password
 gsub_file '.env', 'app_db_database', "#{database_name}_development"
 gsub_file '.env', 'app_db_test_database', "#{database_name}_test"
-
-
-# Database credentials
-database_user_name = ask('Enter the database user name. Press <enter> to skip.')
-unless database_user_name.empty?
-  gsub_file 'config/database.yml', '#user: database_user_name', "user: #{database_user_name}"
-end
-database_user_password = ask('Enter the database user password. Press <enter> to skip.')
-unless database_user_password.empty?
-  gsub_file 'config/database.yml', '#password: database_user_password', "password: #{database_user_password}"
-end
 
 
 # Run bundle to install gems
