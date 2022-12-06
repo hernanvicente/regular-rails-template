@@ -6,7 +6,7 @@ This is a template I use for my new Ruby on Rails applications. **Pull requests 
 ## Requirements
 
 You'll need the following installed to run the template successfully:
-  * Ruby 2.6.3 or higher
+  * Ruby 3.0.1 or higher
   * Redis - For ActionCable support
   * bundler - gem install bundler
   * rails - gem install rails
